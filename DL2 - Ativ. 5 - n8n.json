@@ -1,0 +1,547 @@
+{
+  "name": "DLII: Automação de resumo de monitoramento",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=O seguinte erro foi notificado, via webhook, pelo Zabbix:\n{{ $('Webhook').item.json.body.toJsonString() }}\n\nResuma, e um parágrafo, o erro e a provável causa.",
+        "options": {
+          "systemMessage": "=Você é um assistente que captura eventos de monitoramento do Zabbix e envia resumos desses eventos aos administradores com possíveis soluções."
+        }
+      },
+      "id": "29963449-1dc1-487d-96f2-7ff0a5c3cd97",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        1300,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## ✅ Trabalho para a Disciplina DL2\nUm exemplo de erro recebido a partir do Zabbix e proposta de solução.\nNotificação enviada via mensagem para administrador de sistema\n\n### Notificação de erro recebida via webhook\n### Resumir erro e oferecer possível solução em IA (ChatGPT)\n### Notificar, via mensagem, administradores\n### Armazena erros recebidos ao longo do dia\n### Envia resumo diário aos administradores com áudio curto, para ouvirem em situação onde a leitura seja complicada (direção)",
+        "height": 469,
+        "width": 499,
+        "color": 6
+      },
+      "id": "eae35513-07c2-4de2-a795-a153b6934c1b",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -340,
+        -280
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "cbaedf86-9153-4778-b893-a7e50d3e04ba",
+      "name": "OpenAI Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        1300,
+        280
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "p3noy0eqodiPv5Ma",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "zabbix-trigger",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        220,
+        80
+      ],
+      "id": "a2fc96e7-4aa7-4431-9d85-07f254bc77fa",
+      "name": "Webhook",
+      "webhookId": "d211b85b-65cd-4692-a572-252e43f928ca"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        220,
+        -260
+      ],
+      "id": "bce18768-fbae-4b83-a4a0-7ad187376671",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "f4d9bd27-44b5-460a-b3b2-f9589745e948",
+      "name": "OpenAI Model Resumo",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        960,
+        -80
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "p3noy0eqodiPv5Ma",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Resuma, em um único parágrafo, todos os erros ocorridos ao longo do dia, agrupando os semelhantes.\n\nOs erros seguem, em um array json:\n\n{{ $input.all().map(item => item.json).toJsonString() }}\n\nUse no máximo 40 palavras.\n\nNão resuma cada erro, mas todos de uma vez. É um resumo do dia inteiro, por isso não forneça três outputs, mas um só.",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "=Você é um assistente que deve resumir os eventos de monitoramento capturados do dia a partir do Zabbix."
+        }
+      },
+      "id": "7b1dab41-f9c6-4bd3-9e45-90ce852985f9",
+      "name": "AI Agent Resumo",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        980,
+        -260
+      ],
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot7698607869:AAEpjAOkRbg6FC1j_A4tEtjMn9WDfEZHcXA/sendMessage",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "667282769"
+            },
+            {
+              "name": "text",
+              "value": "=<b>Alerta do Zabbix</b>\n\n{{ $json.output }}"
+            },
+            {
+              "name": "parse_mode",
+              "value": "HTML"
+            }
+          ]
+        },
+        "options": {
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1620,
+        80
+      ],
+      "id": "ed45af20-9aeb-47c9-a34e-dea8ac20010b",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "fileSelector": "eventos",
+        "options": {
+          "dataPropertyName": "data"
+        }
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        380,
+        80
+      ],
+      "id": "f60d847f-ff98-4edc-be43-a975d9a17aaf",
+      "name": "Lê histórico",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "eventos",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        1060,
+        80
+      ],
+      "id": "e1c06ba8-6a67-4c75-a565-e39537a67952",
+      "name": "Escreve Histórico",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "fileSelector": "eventos",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        380,
+        -260
+      ],
+      "id": "9d606c5e-9cbc-4b9a-978e-146eafa4583c",
+      "name": "Lê histórico p/ resumo",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "operation": "fromJson",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        540,
+        80
+      ],
+      "id": "92a0057d-d98d-408b-a645-bb5bee14347e",
+      "name": "Extract from File",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "toJson",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        80
+      ],
+      "id": "563a77cc-c279-4be0-8933-3bca92b0af94",
+      "name": "Convert to File",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "fromJson",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        540,
+        -260
+      ],
+      "id": "2b3af49a-529d-49f2-8547-0acd3fc73ab1",
+      "name": "Extract from File - Resumo",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const novaEntrada = {\n  host: $('Webhook').first().json.body.host,\n  trigger: $('Webhook').first().json.body.trigger,\n  status: $('Webhook').first().json.body.status,\n  severity: $('Webhook').first().json.body.severity,\n  time: $('Webhook').first().json.body.time\n};\n\nlet eventos = $input.first().json?.data || [];\neventos.push(novaEntrada);\nreturn eventos;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        700,
+        80
+      ],
+      "id": "6dfb5922-dfb1-4346-b1a7-4697367036ff",
+      "name": "Concatena Eventos",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "let eventosDia = [];\nconst hoje = new Date().toISOString().split(\"T\")[0];\n\nfor (const item of $input.first().json.data) {\n  if(item.time.startsWith(hoje)){\n    eventosDia.push(item);\n  }\n}\n\nreturn eventosDia;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        740,
+        -260
+      ],
+      "id": "5a316347-720d-4b8d-a272-eb0a2dd64529",
+      "name": "Eventos do dia",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/audio/speech",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "gpt-4o-mini-tts"
+            },
+            {
+              "name": "input",
+              "value": "={{ $json.output }}"
+            },
+            {
+              "name": "voice",
+              "value": "nova"
+            },
+            {
+              "name": "response_format",
+              "value": "opus"
+            },
+            {
+              "name": "instructions",
+              "value": "Deve ser falado em português do Brasil"
+            }
+          ]
+        },
+        "options": {
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1440,
+        -260
+      ],
+      "id": "a77a858c-d396-41a3-9d52-5126982d4235",
+      "name": "HTTP Req OAI TTS",
+      "alwaysOutputData": false,
+      "credentials": {
+        "openAiApi": {
+          "id": "p3noy0eqodiPv5Ma",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot7698607869:AAEpjAOkRbg6FC1j_A4tEtjMn9WDfEZHcXA/sendVoice",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "667282769"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "voice",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1740,
+        -260
+      ],
+      "id": "2a79f38d-461f-4c9e-ab24-f326fc4adffe",
+      "name": "HTTP Telegram"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "OpenAI Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Lê histórico",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Lê histórico p/ resumo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Model Resumo": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent Resumo",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lê histórico": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Concatena Eventos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File": {
+      "main": [
+        [
+          {
+            "node": "Escreve Histórico",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Escreve Histórico": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lê histórico p/ resumo": {
+      "main": [
+        [
+          {
+            "node": "Extract from File - Resumo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File - Resumo": {
+      "main": [
+        [
+          {
+            "node": "Eventos do dia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Concatena Eventos": {
+      "main": [
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Eventos do dia": {
+      "main": [
+        [
+          {
+            "node": "AI Agent Resumo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent Resumo": {
+      "main": [
+        [
+          {
+            "node": "HTTP Req OAI TTS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Req OAI TTS": {
+      "main": [
+        [
+          {
+            "node": "HTTP Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "3ab15624-c88d-48c9-aae3-6bc52f366704",
+  "meta": {
+    "templateId": "PT1i+zU92Ii5O2XCObkhfHJR5h9rNJTpiCIkYJk9jHU=",
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0c75fd984dae22df14ceb44022caae728e5ddcff6c95f827f62024eedeee0bed"
+  },
+  "id": "05tLkxEMkqlrUVrC",
+  "tags": []
+}
